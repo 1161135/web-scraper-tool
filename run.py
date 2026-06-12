@@ -15,6 +15,7 @@ from scraper.cli import parse_args
 from scraper.browser import get_page_text
 from scraper.extractor import extract_fields
 from scraper.storage import save_all
+from scraper.reporter import save_html
 
 
 def main() -> None:
@@ -37,6 +38,11 @@ def main() -> None:
 
     print(f"💾 正在保存数据 ({args.output})")
     saved = save_all(extracted, args.url, args.output)
+
+    # Always generate HTML report
+    out_dir = os.path.dirname(next(iter(saved.values())))
+    html_path = save_html(extracted, args.url, args.fields, out_dir)
+    saved["html"] = html_path
 
     print("\n✅ 采集完成!")
     print(f"   数据: {extracted}")
