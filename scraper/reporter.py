@@ -159,3 +159,117 @@ def save_html(data: dict, url: str, fields: list[str],
     with open(path, "w", encoding="utf-8") as f:
         f.write(html)
     return path
+
+
+def _batch_html_template(source_url: str, timestamp: str,
+                         fields: list[str], items: list[dict]) -> str:
+    """Generate an HTML page showing a table of all collected items."""
+    # Build table header
+    cols = fields + ["来源"]
+    header_html = "".join(f"<th>{f}</th>" for f in cols)
+
+    # Build table rows
+    rows_html = ""
+    for i, item in enumerate(items, 1):
+        row = f"<tr><td class='row-num'>{i}</td>"
+        for f in fields:
+            val = item.get(f, "")
+            if val is None:
+                val = ""
+            row += f"<td>{val}</td>"
+        url = item.get("_url", "")
+        title = item.get("_title", url)
+        row += f'<td><a href="{url}" target="_blank" title="{title}">🔗</a></td>'
+        row += "</tr>"
+        rows_html += row
+
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>批量采集结果 — {len(items)} 项</title>
+<style>
+  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+    padding: 40px 20px;
+  }}
+  .container {{ max-width: 1200px; margin: 0 auto; }}
+  h1 {{ font-size: 24px; font-weight: 600; margin-bottom: 8px; }}
+  .meta {{ font-size: 14px; color: #6b7280; margin-bottom: 24px; line-height: 1.6; word-break: break-all; }}
+  .meta a {{ color: #3b82f6; text-decoration: none; }}
+  .summary {{ margin-bottom: 16px; font-size: 14px; color: #374151; }}
+  .summary strong {{ font-size: 18px; }}
+  table {{
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }}
+  th {{
+    background: #1a1a2e;
+    color: white;
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 500;
+    font-size: 13px;
+    white-space: nowrap;
+  }}
+  td {{
+    padding: 10px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 13px;
+    vertical-align: top;
+  }}
+  tr:hover td {{ background: #f9fafb; }}
+  .row-num {{ color: #9ca3af; font-size: 12px; text-align: center; width: 32px; }}
+  .footer {{ margin-top: 16px; font-size: 12px; color: #9ca3af; text-align: center; }}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📋 批量采集结果</h1>
+  <div class="meta">
+    <div>🔗 来源：<a href="{source_url}" target="_blank">{source_url}</a></div>
+    <div>⏱️ 采集时间：{timestamp}</div>
+  </div>
+  <div class="summary">共采集 <strong>{len(items)}</strong> 项数据</div>
+  <table>
+    <thead>
+      <tr><th>#</th>{header_html}</tr>
+    </thead>
+    <tbody>
+{rows_html}    </tbody>
+  </table>
+  <div class="footer">AI Agent 智能采集 · DeepSeek 驱动</div>
+</div>
+</body>
+</html>"""
+
+
+def save_batch_html(items: list[dict], source_url: str,
+                    fields: list[str], out_dir: str) -> str:
+    """Generate an HTML report for batch-collected data.
+
+    Args:
+        items: List of extracted field dicts.
+        source_url: The list/search page URL.
+        fields: The field names extracted.
+        out_dir: Output directory path.
+
+    Returns:
+        Path to saved HTML file.
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    html = _batch_html_template(source_url, timestamp, fields, items)
+
+    path = os.path.join(out_dir, "report.html")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return path

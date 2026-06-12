@@ -1,14 +1,14 @@
 """Command-line argument parsing for web-scraper."""
 
 import argparse
-import sys
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse and return CLI arguments.
 
     Returns:
-        Namespace with .url (str), .fields (list[str]), .output (str)
+        Namespace with .url (str), .fields (list[str]), .output (str),
+        .auto (bool), .limit (int)
 
     """
     parser = argparse.ArgumentParser(
@@ -17,18 +17,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--url",
         required=True,
-        help="Target page URL to extract data from",
+        help="Target page URL (product detail or search/list page)",
     )
     parser.add_argument(
         "--fields",
         required=True,
-        help="Comma-separated field names to extract (e.g. 名称,价格,描述)",
+        help="Comma-separated field names (e.g. 名称,价格,描述)",
     )
     parser.add_argument(
         "--output",
         choices=["json", "csv", "both"],
         default="both",
         help="Output format (default: both)",
+    )
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-detect and batch-collect items from a list/search page",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=5,
+        help="Max items to collect in auto mode (default: 5)",
     )
 
     ns = parser.parse_args(argv)
@@ -38,10 +49,3 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("At least one field must be specified in --fields")
 
     return ns
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    print(f"URL: {args.url}")
-    print(f"Fields: {args.fields}")
-    print(f"Output: {args.output}")
