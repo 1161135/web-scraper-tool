@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 网页数据采集工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    padding: 32px 20px;
+    text-align: center;
+  }
+  .header h1 { font-size: 28px; margin-bottom: 8px; }
+  .header p { font-size: 14px; color: #94a3b8; }
+  .container { max-width: 800px; margin: 0 auto; padding: 24px 20px; }
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .card h2 { font-size: 18px; margin-bottom: 16px; color: #1a1a2e; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  }
+  .form-group textarea { min-height: 80px; resize: vertical; }
+  .btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+  }
+  .btn:hover { background: #2563eb; }
+  .btn:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+  .btn-loading {
+    position: relative;
+    color: transparent;
+  }
+  .btn-loading::after {
+    content: "";
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .result-table th, .result-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+  }
+  .result-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    width: 120px;
+  }
+  .result-table td { color: #1a1a2e; word-break: break-word; }
+  .result-table tr:last-child td { border-bottom: none; }
+  .files-list {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+  .files-list h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+  .files-list li {
+    list-style: none;
+    font-size: 13px;
+    color: #3b82f6;
+    padding: 4px 0;
+    font-family: monospace;
+  }
+  .hint {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+  .try-link {
+    display: inline-block;
+    margin: 6px 4px 0 0;
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+  }
+  .try-link:hover { background: #e5e7eb; }
+  .success-badge {
+    display: inline-block;
+    background: #dcfce7;
+    color: #16a34a;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .example-urls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .example-urls button {
+    padding: 4px 10px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .example-urls button:hover { background: #e5e7eb; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🕷️ AI 网页数据采集工具</h1>
+  <p>输入网址 + 描述要提取的字段，AI 自动理解页面并提取数据</p>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2>开始采集</h2>
+    <form method="POST" id="scrape-form" onsubmit="startLoading()">
+      <div class="form-group">
+        <label for="url">网页 URL</label>
+        <input type="url" id="url" name="url" value="{{ url }}"
+               placeholder="https://product.dangdang.com/29311943.html" required>
+        <div class="example-urls">
+          <button type="button" onclick="fillUrl('https://product.dangdang.com/29311943.html')">📚 当当网 · 活着</button>
+          <button type="button" onclick="fillUrl('https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html')">📖 Books to Scrape</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="fields">要提取的字段（用中文逗号分隔）</label>
+        <input type="text" id="fields" name="fields" value="{{ fields }}"
+               placeholder="书名, 作者, 价格, 出版社">
+        <div class="example-urls">
+          <button type="button" onclick="fillFields('书名, 作者, 价格, 出版社')">📋 示例字段</button>
+        </div>
+      </div>
+      <button type="submit" class="btn" id="submit-btn">🤖 AI 智能采集</button>
+    </form>
+  </div>
+
+  {% if error %}
+  <div class="card">
+    <div class="error">{{ error }}</div>
+  </div>
+  {% endif %}
+
+  {% if result %}
+  <div class="card">
+    <div class="success-badge">✅ 采集成功</div>
+    <h2>{{ result.title }}</h2>
+    <table class="result-table">
+      {% for key, value in result.data.items() %}
+      <tr>
+        <th>{{ key }}</th>
+        <td>{{ value if value is not none else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <div class="files-list">
+      <h3>📁 输出文件</h3>
+      <ul>
+        {% for fmt, path in result.files.items() %}
+        <li>{{ fmt.upper() }}: {{ path }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="text-align:center;padding:20px;color:#9ca3af;font-size:13px">
+    <p>基于 DeepSeek AI · 仅需 Python 环境</p>
+    <p style="margin-top:4px">
+      <a href="https://github.com/1161135/web-scraper-tool" style="color:#3b82f6;text-decoration:none">GitHub 仓库</a>
+    </p>
+  </div>
+</div>
+
+<script>
+function startLoading() {
+  document.getElementById('submit-btn').classList.add('btn-loading');
+  document.getElementById('submit-btn').disabled = true;
+}
+function fillUrl(url) {
+  document.getElementById('url').value = url;
+}
+function fillFields(fields) {
+  document.getElementById('fields').value = fields;
+}
+</script>
+</body>
+</html>
