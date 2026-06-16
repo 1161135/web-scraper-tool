@@ -14,6 +14,13 @@ import sys
 import os
 import time
 
+# Force UTF-8 output for Chinese characters
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+elif hasattr(sys, "setdefaultencoding"):
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+
 from dotenv import load_dotenv
 
 from scraper.cli import parse_args
@@ -22,6 +29,7 @@ from scraper.extractor import extract_fields
 from scraper.storage import save_all, save_batch
 from scraper.reporter import save_html, save_batch_html
 from scraper.scout import find_item_urls
+from scraper.login import login_taobao, login_jd, clear_session, has_session
 
 
 def main() -> None:
@@ -32,6 +40,23 @@ def main() -> None:
         sys.exit(1)
 
     args = parse_args()
+
+    # Handle login/clear-session commands
+    if args.clear_session:
+        clear_session()
+        print("Session cleared.")
+        return
+
+    if args.login:
+        print("Which platform do you want to log into?")
+        print("  1. Taobao (淘宝)")
+        print("  2. JD.com (京东)")
+        choice = input("Enter 1 or 2: ").strip()
+        if choice == "2":
+            login_jd()
+        else:
+            login_taobao()
+        return
 
     if args.auto:
         _run_auto(args)
@@ -72,35 +97,39 @@ def _run_auto(args) -> None:
     print("=" * 50)
 
     # Step 1: Find item URLs on the list page
-    print(f"\n[1/3] AI scanning list page for item links...")
-    item_urls = find_item_urls(args.url, max_items=args.limit)
+    print(f"\n[1/3] Scanning list page for item links...")
+    items = find_item_urls(args.url, max_items=args.limit)
 
-    if not item_urls:
+    if not items:
         print("  No item links found. Try without --auto for single-page mode.")
         sys.exit(1)
 
-    print(f"  Found {len(item_urls)} items:")
-    for i, url in enumerate(item_urls, 1):
-        print(f"    {i}. {url}")
+    print(f"  Found {len(items)} items (score=confidence level):")
+    print(f"  {'#':>3}  {'Score':>5}  {'Product Name':<40}  URL")
+    print(f"  {'-'*3}  {'-'*5}  {'-'*40}  {'-'*50}")
+    for i, item in enumerate(items, 1):
+        name = item["text"][:38]
+        print(f"  {i:>3}  {item['score']:>5}  {name:<40}  {item['url']}")
 
     # Step 2: Extract fields from each item
-    print(f"\n[2/3] Extracting data from {len(item_urls)} items...")
+    print(f"\n[2/3] Extracting data from {len(items)} items...")
     all_data = []
-    for i, url in enumerate(item_urls, 1):
+    for i, item in enumerate(items, 1):
+        url = item["url"]
         try:
-            print(f"  [{i}/{len(item_urls)}] {url}")
+            print(f"  [{i}/{len(items)}] {item['text'][:40]:40s} ", end="")
             page_data = get_page_text(url)
             extracted = extract_fields(page_data["text"], args.fields)
             extracted["_url"] = url
             extracted["_title"] = page_data["title"][:80]
             all_data.append(extracted)
-            print(f"    -> {extracted}")
+            print(f"OK")
         except Exception as e:
-            print(f"    -> FAILED: {e}")
+            print(f"FAILED: {e}")
             all_data.append({"_url": url, "_title": "[FAILED]", **{f: None for f in args.fields}})
 
         # Small delay between requests
-        if i < len(item_urls):
+        if i < len(items):
             time.sleep(1)
 
     # Step 3: Save combined results
