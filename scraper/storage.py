@@ -49,7 +49,7 @@ def save_csv(data: dict, out_dir: str) -> str:
     """
     path = os.path.join(out_dir, "data.csv")
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(data.keys()))
+        writer = csv.DictWriter(f, fieldnames=list(data.keys()), extrasaction="ignore")
         writer.writeheader()
         writer.writerow(data)
     return path
@@ -123,13 +123,16 @@ def save_csv_batch(items: list[dict], out_dir: str) -> str:
     seen = set()
     for item in items:
         for k in item:
-            if k not in seen:
+            if k not in seen and not k.startswith("_"):
+                # Skip keys that look like concatenated field names
+                if len(k) > 20 and ("，" in k or ", " in k):
+                    continue
                 seen.add(k)
                 all_keys.append(k)
 
     path = os.path.join(out_dir, "data.csv")
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=all_keys)
+        writer = csv.DictWriter(f, fieldnames=all_keys, extrasaction="ignore")
         writer.writeheader()
         for item in items:
             writer.writerow(item)

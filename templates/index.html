@@ -133,6 +133,10 @@
 <div class="header">
   <h1>AI 网页数据采集工具</h1>
   <p>输入网址 + 描述要提取的字段，AI 自动理解页面并提取数据</p>
+  <div style="margin-top: 14px; display: flex; justify-content: center; gap: 10px;">
+    <a href="/" style="color:white;text-decoration:none;padding:6px 16px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:13px;">🔍 采集</a>
+    <a href="/monitor/" style="color:white;text-decoration:none;padding:6px 16px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:13px;">📊 监控</a>
+  </div>
 </div>
 
 <div class="container">
@@ -144,9 +148,10 @@
         <input type="url" id="url" name="url" value="{{ url }}"
                placeholder="https://product.dangdang.com/29311943.html" required>
         <div class="examples">
-          <button type="button" onclick="fillUrl('https://product.dangdang.com/29311943.html')">示例：当当网单品</button>
-          <button type="button" onclick="fillUrl('http://search.dangdang.com/?key=活着')">示例：当当网搜索</button>
-          <button type="button" onclick="fillUrl('https://books.toscrape.com/catalogue/page-1.html')">示例：Books列表</button>
+          <button type="button" onclick="window.open('https://www.dangdang.com','_blank')">当当网首页</button>
+          <button type="button" onclick="fillUrl('https://product.dangdang.com/29311943.html')">示例：单品</button>
+          <button type="button" onclick="fillUrl('http://search.dangdang.com/?key=活着')">示例：搜索</button>
+          <button type="button" onclick="fillUrl('https://books.toscrape.com/catalogue/page-1.html')">示例：Books</button>
         </div>
       </div>
 
@@ -167,10 +172,10 @@
       <div class="form-group">
         <label for="fields">要提取的字段（逗号分隔）</label>
         <input type="text" id="fields" name="fields" value="{{ fields }}"
-               placeholder="Title, Author, Price, Publisher">
+               placeholder="书名, 作者, 价格, 出版社">
         <div class="examples">
-          <button type="button" onclick="fillFields('Title, Author, Price, Publisher')">书籍字段</button>
-          <button type="button" onclick="fillFields('Product Name, Price, Rating')">商品字段</button>
+          <button type="button" onclick="fillFields('书名, 作者, 价格, 出版社')">书籍字段</button>
+          <button type="button" onclick="fillFields('商品名称, 价格, 店铺')">商品字段</button>
         </div>
       </div>
 
@@ -196,25 +201,42 @@
       </tr>
       {% endfor %}
     </table>
+
+    <!-- 一键加入价格监控 -->
+    <div style="margin-top: 14px; padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 20px;">📊</span>
+      <div style="flex: 1;">
+        <div style="font-size: 13px; font-weight: 600; color: #16a34a;">加入价格监控</div>
+        <div style="font-size: 12px; color: #6b7280;">定时采集该商品价格，检测变化自动告警</div>
+      </div>
+      <a href="{{ result.monitor_add_url }}" target="_blank" class="btn-primary"
+         style="display: inline-block; width: auto; padding: 8px 16px; font-size: 13px; text-decoration: none;">
+        + 加入监控
+      </a>
+    </div>
     {% else %}
     <div style="overflow-x:auto">
     <table class="batch-table">
       <thead>
         <tr><th>#</th>
-          {% for f in result.data[0].keys() %}
-            {% if not f.startswith('_') %}<th>{{ f }}</th>{% endif %}
+          {% for f in result.fields %}
+            <th>{{ f }}</th>
           {% endfor %}
+            <th style="width:60px;">操作</th>
         </tr>
       </thead>
       <tbody>
         {% for item in result.data %}
         <tr>
           <td class="row-num">{{ loop.index }}</td>
-          {% for key, value in item.items() %}
-            {% if not key.startswith('_') %}
-            <td>{{ value if value is not none else '—' }}</td>
-            {% endif %}
+          {% for f in result.fields %}
+            <td>{{ item.get(f, '—') if item.get(f) is not none else '—' }}</td>
           {% endfor %}
+          <td>
+            {% if item.get('_monitor_url') %}
+            <a href="{{ item._monitor_url }}" target="_blank" style="color:#16a34a;text-decoration:none;font-size:12px;white-space:nowrap;" title="加入价格监控">📊 监控</a>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -234,7 +256,7 @@
   {% endif %}
 
   <div class="footer">
-    <p>基于 DeepSeek AI · 支持当当网 / Books to Scrape</p>
+    <p>数据来源：<a href="https://www.dangdang.com" target="_blank">当当网</a> · 基于 DeepSeek AI 智能提取</p>
     <p><a href="https://github.com/1161135/web-scraper-tool">GitHub 仓库</a></p>
   </div>
 </div>

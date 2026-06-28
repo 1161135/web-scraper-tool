@@ -43,7 +43,7 @@ def login_taobao() -> bool:
     from playwright.sync_api import sync_playwright
 
     print("=" * 50)
-    print("  LOGIN MODE")
+    print("  LOGIN MODE - Taobao")
     print("=" * 50)
     print("  A browser window will open.")
     print("  1. Go to taobao.com and log in manually")
@@ -52,28 +52,20 @@ def login_taobao() -> bool:
     print("=" * 50)
 
     with sync_playwright() as pw:
-        # Try system Edge or Chrome
-        browser = None
-        for channel in ["msedge", "chrome", None]:
-            try:
-                if channel:
-                    browser = pw.chromium.launch(
-                        headless=False, channel=channel
-                    )
-                else:
-                    browser = pw.chromium.launch(headless=False)
-                break
-            except Exception:
-                continue
-
+        browser = _launch_stealth_browser(pw, headless=False)
         if browser is None:
             print("ERROR: No browser found. Install Edge or Chrome.")
             return False
 
         context = browser.new_context(
             viewport={"width": 1280, "height": 800},
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/130.0.0.0 Safari/537.36"
+            ),
         )
-        page = context.new_page()
+        page = _stealth_page(context)
         page.goto("https://www.taobao.com", wait_until="networkidle")
 
         input("  Press ENTER after you've logged in...")
@@ -94,6 +86,41 @@ def login_taobao() -> bool:
         return True
 
 
+def _launch_stealth_browser(pw, headless: bool = False):
+    """Launch browser with anti-detection measures."""
+    browser = None
+    launch_args = [
+        "--disable-blink-features=AutomationControlled",
+        "--disable-features=IsolateOrigins,site-per-process",
+        "--disable-web-security",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+    ]
+    for channel in ["msedge", "chrome", None]:
+        try:
+            kwargs = {"headless": headless, "args": launch_args}
+            if channel:
+                kwargs["channel"] = channel
+            browser = pw.chromium.launch(**kwargs)
+            break
+        except Exception:
+            continue
+    return browser
+
+
+def _stealth_page(context):
+    """Create a page with stealth scripts to hide automation."""
+    page = context.new_page()
+    # Override webdriver detection
+    page.add_init_script("""
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en'] });
+        window.chrome = { runtime: {} };
+    """)
+    return page
+
+
 def login_jd() -> bool:
     """Open a visible browser for the user to log into JD.com."""
     from playwright.sync_api import sync_playwright
@@ -102,29 +129,28 @@ def login_jd() -> bool:
     print("  LOGIN MODE - JD.com")
     print("=" * 50)
     print("  A browser window will open.")
-    print("  1. Go to jd.com and log in manually")
-    print("  2. After login, press ENTER to save session")
+    print("  1. Log into JD.com in the browser")
+    print("  2. After login, come back to this terminal")
+    print("  3. Press ENTER to save session")
     print("=" * 50)
 
     with sync_playwright() as pw:
-        browser = None
-        for channel in ["msedge", "chrome", None]:
-            try:
-                if channel:
-                    browser = pw.chromium.launch(headless=False, channel=channel)
-                else:
-                    browser = pw.chromium.launch(headless=False)
-                break
-            except Exception:
-                continue
-
+        browser = _launch_stealth_browser(pw, headless=False)
         if browser is None:
-            print("ERROR: No browser found.")
+            print("ERROR: No browser found. Install Edge or Chrome.")
             return False
 
-        context = browser.new_context(viewport={"width": 1280, "height": 800})
-        page = context.new_page()
-        page.goto("https://www.jd.com", wait_until="networkidle")
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/130.0.0.0 Safari/537.36"
+            ),
+        )
+        page = _stealth_page(context)
+        page.goto("https://passport.jd.com/new/login.aspx", wait_until="networkidle")
+        print("  Please log into JD.com using QR code or account...")
 
         input("  Press ENTER after you've logged in...")
 

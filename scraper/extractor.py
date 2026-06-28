@@ -8,12 +8,16 @@ from openai import OpenAI
 
 def _build_prompt(page_text: str, fields: list[str]) -> str:
     fields_str = ", ".join(fields)
+    price_hint = ""
+    for f in fields:
+        if "价" in f:
+            price_hint = "\n注意：如果页面有「售价」就用「售价」的值，不要用「纸质售价」的值。\n"
+            break
     return f"""你是一个网页数据提取助手。请从以下网页内容中提取指定的信息。
 
-需要提取的字段：{fields_str}
-
+需要提取的字段：{fields_str}{price_hint}
 网页内容：
-{page_text[:6000]}
+{page_text[:8000]}
 
 请以JSON格式返回结果，只返回JSON，不要加任何额外文字。
 如果某个字段找不到对应值，设为 null。
@@ -60,6 +64,23 @@ def extract_fields(page_text: str, fields: list[str]) -> dict:
                 cont = cont.strip()
 
             result = json.loads(cont)
+
+            # Handle list response: AI may return multiple items
+            if isinstance(result, list):
+                if not result:
+                    result = {}
+                else:
+                    # Take the item that best matches the requested fields
+                    items = [r for r in result if isinstance(r, dict)]
+                    if items:
+                        best = max(
+                            items,
+                            key=lambda r: sum(1 for f in fields if f in r)
+                        )
+                        result = best
+                        print(f"  [AI returned {len(items)} items, using first matching one]: {len([f for f in fields if f in result])}/{len(fields)} fields matched")
+                    else:
+                        result = items[0] if items else {}
 
             # Validate: ensure all requested fields are present
             for field in fields:

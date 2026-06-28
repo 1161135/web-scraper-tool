@@ -4,3 +4,6 @@ __pycache__/
 output/
 node_modules/
 .browser_session.json
+pricemon_data.db
+diagnostics.py
+.reasonix/

@@ -1,0 +1,81 @@
+{% extends "monitor_base.html" %}
+{% block title %}{% if edit %}编辑{% else %}添加{% endif %}监控目标{% endblock %}
+{% block content %}
+<h1>{% if edit %}✏️ 编辑监控目标{% else %}➕ 添加监控目标{% endif %}</h1>
+
+{% if errors %}
+<div class="error">
+  {% for e in errors %}<div>• {{ e }}{% if duplicate_id and loop.first %} <a href="{{ url_for('monitor.target_detail', id=duplicate_id) }}" style="color:#2563eb;text-decoration:underline;">查看已有监控 →</a>{% endif %}</div>{% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="max-width: 600px;">
+  <form method="POST" action="{% if edit %}{{ url_for('monitor.edit_target', id=target_id) }}{% else %}{{ url_for('monitor.add_target_page') }}{% endif %}">
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">商品名称 *</label>
+      <input type="text" name="name" value="{{ (data or {}).get('name', '') }}" required
+             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">商品 URL *</label>
+      <input type="url" name="url" value="{{ (data or {}).get('url', '') }}" required
+             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+             placeholder="https://product.dangdang.com/xxx.html">
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">要提取的字段</label>
+      <input type="text" name="fields" value="{{ (data or {}).get('fields', []) | join(', ') }}"
+             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+             placeholder="标题, 价格, 评分">
+      <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">用逗号分隔</div>
+    </div>
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">价格字段名 *</label>
+      <input type="text" name="price_field" value="{{ (data or {}).get('price_field', '价格') }}" required
+             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+             placeholder="价格">
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">采集间隔（秒）</label>
+        <input type="number" name="schedule_seconds" value="{{ (data or {}).get('schedule_seconds', 21600) }}"
+               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">默认 21600（6 小时）</div>
+      </div>
+      <div>
+        <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">涨跌幅告警 (%)</label>
+        <input type="number" name="max_change_pct" value="{{ (data or {}).get('max_change_pct', 10) }}" step="0.1"
+               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">超过此百分比触发告警</div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">低价阈值</label>
+        <input type="number" name="min_price" value="{{ (data or {}).get('min_price', '') }}" step="0.01"
+               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+               placeholder="可选">
+      </div>
+      <div>
+        <label style="display: block; font-weight: 500; font-size: 14px; margin-bottom: 4px;">高价阈值</label>
+        <input type="number" name="max_price" value="{{ (data or {}).get('max_price', '') }}" step="0.01"
+               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+               placeholder="可选">
+      </div>
+    </div>
+    {% if edit %}
+    <div style="margin-bottom: 16px;">
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+        <input type="checkbox" name="enabled" {% if (data or {}).get('enabled', True) %}checked{% endif %}>
+        启用监控
+      </label>
+    </div>
+    {% endif %}
+
+    <div style="display: flex; gap: 8px;">
+      <button type="submit" class="btn btn-primary">{% if edit %}保存修改{% else %}添加目标{% endif %}</button>
+      <a href="{{ url_for('monitor.list_targets') }}" class="btn btn-outline">取消</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

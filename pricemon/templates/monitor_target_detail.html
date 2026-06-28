@@ -1,0 +1,141 @@
+{% extends "monitor_base.html" %}
+{% block title %}{{ target.name }}{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+  <div>
+    <h1 style="margin-bottom: 4px;">{{ target.name }}</h1>
+    <div style="font-size: 13px; color: #6b7280; word-break: break-all;">
+      <a href="{{ target.url }}" target="_blank" style="color: #3b82f6;">{{ target.url }}</a>
+    </div>
+  </div>
+  <div style="display: flex; gap: 8px;">
+    <form method="POST" action="{{ url_for('monitor.run_target_now', id=target.id) }}" style="display: inline;">
+      <button class="btn btn-sm btn-primary">▶ 立即采集</button>
+    </form>
+    <a href="{{ url_for('monitor.edit_target', id=target.id) }}" class="btn btn-sm btn-outline">编辑</a>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+  <div class="card" style="text-align: center;">
+    <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">当前价格</div>
+    <div style="font-size: 32px; font-weight: 700; color: #059669;">
+      {% if target.last_price is not none %}¥{{ "%.2f"|format(target.last_price) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="card" style="text-align: center;">
+    <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">上次采集</div>
+    <div style="font-size: 16px; font-weight: 500;">
+      {% if target.last_captured_at %}{{ target.last_captured_at[:16] }}{% else %}尚未采集{% endif %}
+    </div>
+  </div>
+  <div class="card" style="text-align: center;">
+    <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">采集间隔</div>
+    <div style="font-size: 16px; font-weight: 500;">每 {{ target.schedule_seconds // 3600 }} 小时</div>
+  </div>
+  <div class="card" style="text-align: center;">
+    <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">状态</div>
+    <div>
+      {% if target.enabled %}
+      <span style="background: #d1fae5; color: #059669; padding: 4px 12px; border-radius: 999px; font-size: 13px;">运行中</span>
+      {% else %}
+      <span style="background: #fef3c7; color: #d97706; padding: 4px 12px; border-radius: 999px; font-size: 13px;">已暂停</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if trend %}
+<div class="card">
+  <h2 style="font-size: 18px; margin-bottom: 16px;">📈 价格趋势</h2>
+  
+  {% if stats and stats.count > 1 %}
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px;">
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #6b7280;">最低价</div>
+      <div style="font-size: 18px; font-weight: 700; color: #059669;">¥{{ "%.2f"|format(stats.min) }}</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #6b7280;">最高价</div>
+      <div style="font-size: 18px; font-weight: 700; color: #dc2626;">¥{{ "%.2f"|format(stats.max) }}</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #6b7280;">平均价</div>
+      <div style="font-size: 18px; font-weight: 700; color: #3b82f6;">¥{{ "%.2f"|format(stats.avg) }}</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #6b7280;">总变化</div>
+      <div style="font-size: 18px; font-weight: 700; {% if stats.total_change > 0 %}color: #dc2626;{% elif stats.total_change < 0 %}color: #059669;{% else %}color: #6b7280;{% endif %}">
+        {% if stats.total_change > 0 %}↗{% elif stats.total_change < 0 %}↘{% else %}→{% endif %}
+        {{ "%.1f"|format(stats.total_change_pct) }}%
+      </div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #6b7280;">采样次数</div>
+      <div style="font-size: 18px; font-weight: 700; color: #374151;">{{ stats.count }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <canvas id="priceChart" height="100"></canvas>
+</div>
+<script>
+const ctx = document.getElementById('priceChart').getContext('2d');
+const data = {{ trend | tojson | safe }};
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: data.map(d => d.captured_at.slice(0, 16)),
+    datasets: [{
+      label: '价格 (¥)',
+      data: data.map(d => d.price),
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { maxTicksLimit: 12, font: { size: 11 } } },
+      y: { beginAtZero: false }
+    }
+  }
+});
+</script>
+{% endif %}
+
+{% if alerts %}
+<div class="card" style="margin-top: 16px;">
+  <h2 style="font-size: 18px; margin-bottom: 12px;">🔔 最近告警</h2>
+  <table>
+    <thead><tr><th>时间</th><th>类型</th><th>消息</th></tr></thead>
+    <tbody>
+      {% for a in alerts %}
+      <tr style="{% if not a.is_read %}background: #fef2f2;{% endif %}">
+        <td style="font-size: 12px; white-space: nowrap;">{{ a.created_at[:16] }}</td>
+        <td>
+          {% if a.alert_type == 'threshold_low' or a.alert_type == 'threshold_high' %}
+          <span style="background: #fef2f2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 12px;">阈值</span>
+          {% elif a.alert_type == 'price_drop' %}
+          <span style="background: #d1fae5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 12px;">降价</span>
+          {% elif a.alert_type == 'price_rise' %}
+          <span style="background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-size: 12px;">涨价</span>
+          {% endif %}
+        </td>
+        <td style="font-size: 13px;">{{ a.message }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

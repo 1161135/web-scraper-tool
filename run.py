@@ -74,6 +74,12 @@ def _run_single(args) -> None:
     print(f"[AI] Extracting fields: {', '.join(args.fields)}")
     extracted = extract_fields(page_data["text"], args.fields)
 
+    # Apply field aliases (网址→url, 标题→title)
+    aliases = {"网址": "url", "标题": "title"}
+    for user_field, internal_field in aliases.items():
+        if user_field in args.fields:
+            extracted[user_field] = page_data.get(internal_field, "")
+
     print(f"[SAVE] Saving data ({args.output})")
     saved = save_all(extracted, args.url, args.output)
 
@@ -120,6 +126,10 @@ def _run_auto(args) -> None:
             print(f"  [{i}/{len(items)}] {item['text'][:40]:40s} ", end="")
             page_data = get_page_text(url)
             extracted = extract_fields(page_data["text"], args.fields)
+            # Apply field aliases (网址→url, 标题→title)
+            for user_f, internal_f in {"网址": "url", "标题": "title"}.items():
+                if user_f in args.fields:
+                    extracted[user_f] = page_data.get(internal_f, "")
             extracted["_url"] = url
             extracted["_title"] = page_data["title"][:80]
             all_data.append(extracted)

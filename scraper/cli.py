@@ -59,7 +59,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         if not ns.fields:
             parser.error("the following arguments are required: --fields")
 
-        ns.fields = [f.strip() for f in ns.fields.split(",") if f.strip()]
+        ns.fields = [f.strip() for f in ns.fields.replace("，", ",").split(",") if f.strip()]
         if not ns.fields:
             parser.error("At least one field must be specified in --fields")
 

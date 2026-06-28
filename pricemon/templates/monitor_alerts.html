@@ -1,0 +1,53 @@
+{% extends "monitor_base.html" %}
+{% block title %}告警列表{% endblock %}
+{% block content %}
+<h1>🔔 告警列表</h1>
+
+{% if alerts %}
+<table>
+  <thead>
+    <tr>
+      <th>时间</th>
+      <th>商品</th>
+      <th>类型</th>
+      <th>消息</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in alerts %}
+    <tr style="{% if not a.is_read %}background: #fef2f2; font-weight: 500;{% endif %}">
+      <td style="font-size: 12px; white-space: nowrap;">{{ a.created_at[:16] }}</td>
+      <td>
+        <a href="{{ url_for('monitor.target_detail', id=a.target_id) }}" style="color: #3b82f6; text-decoration: none;">
+          {{ a.target_name }}
+        </a>
+      </td>
+      <td>
+        {% if a.alert_type in ('threshold_low', 'threshold_high') %}
+        <span style="background: #fef2f2; color: #dc2626; padding: 2px 6px; border-radius: 4px; font-size: 12px;">{% if a.alert_type == 'threshold_low' %}低价{% else %}高价{% endif %}阈值</span>
+        {% elif a.alert_type == 'price_drop' %}
+        <span style="background: #d1fae5; color: #059669; padding: 2px 6px; border-radius: 4px; font-size: 12px;">降价 {{ "%.1f"|format(a.change_pct|abs) if a.change_pct else '' }}%</span>
+        {% elif a.alert_type == 'price_rise' %}
+        <span style="background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 4px; font-size: 12px;">涨价 {{ "%.1f"|format(a.change_pct) if a.change_pct else '' }}%</span>
+        {% endif %}
+      </td>
+      <td style="font-size: 13px;">{{ a.message }}</td>
+      <td>
+        {% if not a.is_read %}
+        <form method="POST" action="{{ url_for('monitor.read_alert', id=a.id) }}" style="display: inline;">
+          <button class="btn btn-sm btn-outline">标为已读</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="card" style="text-align: center; color: #9ca3af; padding: 48px;">
+  <div style="font-size: 48px; margin-bottom: 16px;">🔕</div>
+  <p>暂无告警</p>
+</div>
+{% endif %}
+{% endblock %}
